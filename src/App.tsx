@@ -12,6 +12,7 @@ const SUCCESS_MS = 900;
 const UPCOMING_COUNT = 4;
 const STORAGE_KEY = 'chordtrainer.enabledChords';
 const LIGHTS_KEY = 'chordtrainer.keylights';
+const EXTRA_KEY = 'chordtrainer.allowExtra';
 
 function loadEnabledChords(): Set<string> {
   try {
@@ -52,6 +53,9 @@ export default function App() {
   const [keyLightsOn, setKeyLightsOn] = useState(
     () => localStorage.getItem(LIGHTS_KEY) !== '0',
   );
+  const [allowExtra, setAllowExtra] = useState(
+    () => localStorage.getItem(EXTRA_KEY) !== '0',
+  );
   const lightsRef = useRef<KeyLights | null>(null);
   const poolChords = useMemo(
     () => ALL_CHORDS.filter((c) => enabledSymbols.has(c.symbol)),
@@ -77,10 +81,16 @@ export default function App() {
     [activeNotes],
   );
 
-  const satisfied = useMemo(
-    () => chord.pitchClasses.every((pc) => heardPitchClasses.has(pc)),
-    [chord, heardPitchClasses],
-  );
+  const satisfied = useMemo(() => {
+    if (!chord.pitchClasses.every((pc) => heardPitchClasses.has(pc))) return false;
+    if (!allowExtra) {
+      // strict: every sounding pitch class must belong to the chord
+      for (const pc of heardPitchClasses) {
+        if (!chord.pitchClasses.includes(pc)) return false;
+      }
+    }
+    return true;
+  }, [chord, heardPitchClasses, allowExtra]);
 
   // Refs so the interval always sees fresh values without re-subscribing
   const satisfiedRef = useRef(satisfied);
@@ -127,10 +137,12 @@ export default function App() {
     }
   }, [index, deck, poolChords]);
 
-  const applyChordPool = (next: Set<string>) => {
+  const applyChordPool = (next: Set<string>, nextAllowExtra: boolean) => {
     setEnabledSymbols(next);
+    setAllowExtra(nextAllowExtra);
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify([...next]));
+      localStorage.setItem(EXTRA_KEY, nextAllowExtra ? '1' : '0');
     } catch {
       // storage unavailable
     }
@@ -294,7 +306,7 @@ export default function App() {
           </span>
           <span className="hint">
             {midi.connected || micOn
-              ? 'Chord tones in any octave · extra notes OK · hold 0.5s'
+              ? `Chord tones in any octave · ${allowExtra ? 'extra notes OK' : 'chord tones only'} · hold 0.5s`
               : 'Connect your Clavinova via USB, or allow the microphone'}
           </span>
         </footer>
@@ -303,6 +315,7 @@ export default function App() {
       <SettingsPanel
         open={settingsOpen}
         enabled={enabledSymbols}
+        allowExtra={allowExtra}
         onApply={applyChordPool}
         onClose={() => setSettingsOpen(false)}
       />

@@ -400,6 +400,35 @@ body {
   font-size: 14px;
 }
 
+.setting-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 4px 24px 12px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: var(--panel-2);
+  border: 1px solid #2b3054;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.setting-row input {
+  margin-top: 2px;
+  accent-color: var(--accent);
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+.setting-row em {
+  display: block;
+  font-style: normal;
+  color: var(--muted);
+  font-size: 12px;
+  margin-top: 2px;
+}
+
 .chord-grid {
   padding: 16px 24px;
   overflow-y: auto;
