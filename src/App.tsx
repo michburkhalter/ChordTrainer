@@ -13,6 +13,7 @@ const UPCOMING_COUNT = 4;
 const STORAGE_KEY = 'chordtrainer.enabledChords';
 const LIGHTS_KEY = 'chordtrainer.keylights';
 const EXTRA_KEY = 'chordtrainer.allowExtra';
+const OCTAVE_KEY = 'chordtrainer.anyOctave';
 
 function loadEnabledChords(): Set<string> {
   try {
@@ -56,6 +57,9 @@ export default function App() {
   const [allowExtra, setAllowExtra] = useState(
     () => localStorage.getItem(EXTRA_KEY) !== '0',
   );
+  const [anyOctave, setAnyOctave] = useState(
+    () => localStorage.getItem(OCTAVE_KEY) !== '0',
+  );
   const lightsRef = useRef<KeyLights | null>(null);
   const poolChords = useMemo(
     () => ALL_CHORDS.filter((c) => enabledSymbols.has(c.symbol)),
@@ -82,15 +86,27 @@ export default function App() {
   );
 
   const satisfied = useMemo(() => {
-    if (!chord.pitchClasses.every((pc) => heardPitchClasses.has(pc))) return false;
+    if (anyOctave) {
+      if (!chord.pitchClasses.every((pc) => heardPitchClasses.has(pc))) return false;
+      if (!allowExtra) {
+        // strict: every sounding pitch class must belong to the chord
+        for (const pc of heardPitchClasses) {
+          if (!chord.pitchClasses.includes(pc)) return false;
+        }
+      }
+      return true;
+    }
+    // exact keys: every note of the displayed voicing must be held
+    const held = new Set(activeNotes);
+    if (!chord.voicing.every((m) => held.has(m))) return false;
     if (!allowExtra) {
-      // strict: every sounding pitch class must belong to the chord
-      for (const pc of heardPitchClasses) {
-        if (!chord.pitchClasses.includes(pc)) return false;
+      const allowed = new Set(chord.voicing);
+      for (const m of activeNotes) {
+        if (!allowed.has(m)) return false;
       }
     }
     return true;
-  }, [chord, heardPitchClasses, allowExtra]);
+  }, [chord, heardPitchClasses, activeNotes, allowExtra, anyOctave]);
 
   // Refs so the interval always sees fresh values without re-subscribing
   const satisfiedRef = useRef(satisfied);
@@ -137,12 +153,14 @@ export default function App() {
     }
   }, [index, deck, poolChords]);
 
-  const applyChordPool = (next: Set<string>, nextAllowExtra: boolean) => {
+  const applyChordPool = (next: Set<string>, nextAllowExtra: boolean, nextAnyOctave: boolean) => {
     setEnabledSymbols(next);
     setAllowExtra(nextAllowExtra);
+    setAnyOctave(nextAnyOctave);
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify([...next]));
       localStorage.setItem(EXTRA_KEY, nextAllowExtra ? '1' : '0');
+      localStorage.setItem(OCTAVE_KEY, nextAnyOctave ? '1' : '0');
     } catch {
       // storage unavailable
     }
@@ -306,7 +324,7 @@ export default function App() {
           </span>
           <span className="hint">
             {midi.connected || micOn
-              ? `Chord tones in any octave · ${allowExtra ? 'extra notes OK' : 'chord tones only'} · hold 0.5s`
+              ? `${anyOctave ? 'Chord tones in any octave' : 'Exact keys shown'} · ${allowExtra ? 'extra notes OK' : 'no extra notes'} · hold 0.5s`
               : 'Connect your Clavinova via USB, or allow the microphone'}
           </span>
         </footer>
@@ -316,6 +334,7 @@ export default function App() {
         open={settingsOpen}
         enabled={enabledSymbols}
         allowExtra={allowExtra}
+        anyOctave={anyOctave}
         onApply={applyChordPool}
         onClose={() => setSettingsOpen(false)}
       />

@@ -6,23 +6,26 @@ interface Props {
   open: boolean;
   enabled: Set<string>;
   allowExtra: boolean;
-  onApply: (next: Set<string>, allowExtra: boolean) => void;
+  anyOctave: boolean;
+  onApply: (next: Set<string>, allowExtra: boolean, anyOctave: boolean) => void;
   onClose: () => void;
 }
 
 const OPEN_CHORDS = ['C', 'G', 'F', 'A', 'Dm', 'Am', 'Em'];
 
-export default function SettingsPanel({ open, enabled, allowExtra, onApply, onClose }: Props) {
+export default function SettingsPanel({ open, enabled, allowExtra, anyOctave, onApply, onClose }: Props) {
   const [draft, setDraft] = useState<Set<string>>(new Set(enabled));
   const [extraDraft, setExtraDraft] = useState(allowExtra);
+  const [octaveDraft, setOctaveDraft] = useState(anyOctave);
 
   // Reset the draft whenever the panel is opened
   useEffect(() => {
     if (open) {
       setDraft(new Set(enabled));
       setExtraDraft(allowExtra);
+      setOctaveDraft(anyOctave);
     }
-  }, [open, enabled, allowExtra]);
+  }, [open, enabled, allowExtra, anyOctave]);
 
   const groups = useMemo(() => {
     const byRoot = new Map<number, Chord[]>();
@@ -72,6 +75,18 @@ export default function SettingsPanel({ open, enabled, allowExtra, onApply, onCl
         <p className="modal-sub">
           Select the chords you want to practice. Deselected chords are skipped.
         </p>
+
+        <label className="setting-row">
+          <input
+            type="checkbox"
+            checked={octaveDraft}
+            onChange={(e) => setOctaveDraft(e.target.checked)}
+          />
+          <span>
+            Chord tones in any octave
+            <em>Off: play exactly the keys shown</em>
+          </span>
+        </label>
 
         <label className="setting-row">
           <input
@@ -131,7 +146,7 @@ export default function SettingsPanel({ open, enabled, allowExtra, onApply, onCl
             <button className="btn" onClick={() => setAll(false)}>
               None
             </button>
-            <button className="btn btn-primary" onClick={() => onApply(draft, extraDraft)} disabled={draft.size === 0}>
+            <button className="btn btn-primary" onClick={() => onApply(draft, extraDraft, octaveDraft)} disabled={draft.size === 0}>
               Apply
             </button>
           </div>

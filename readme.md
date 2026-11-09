@@ -25,8 +25,17 @@ Open http://localhost:5173 in **Chrome or Edge** (required for Web MIDI).
    browser to use MIDI — accept.
 4. The status pill should show your device name. Play the highlighted chord.
 
-Chord tones count in **any octave and any inversion**; extra notes are allowed.
 All chord tones must be held for ~0.5 s to advance.
+
+Two matching rules are configurable in the ⚙ Chords settings (persisted across
+reloads): **Chord tones in any octave** and **Allow extra notes**.
+
+| any octave | extra notes | result |
+|---|---|---|
+| on | on | chord tones anywhere, anything else ignored (easiest) |
+| on | off | chord tones anywhere, but nothing outside the chord |
+| off | on | exact keys required, other notes tolerated |
+| off | off | exactly the three shown keys, nothing else (hardest) |
 
 ### Key lights (CSP Stream Lights)
 
