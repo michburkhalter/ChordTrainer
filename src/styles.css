@@ -275,6 +275,14 @@ body {
   fill: rgba(108, 123, 255, 0.55);
 }
 
+.key-bass {
+  fill: rgba(245, 158, 11, 0.4);
+}
+
+.key-black.key-bass {
+  fill: rgba(245, 158, 11, 0.55);
+}
+
 .key-target-heard {
   fill: var(--good-soft);
 }

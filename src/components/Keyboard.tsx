@@ -4,6 +4,8 @@ import { KEYBOARD_HIGH, KEYBOARD_LOW, isBlackMidi, midiToName, midiToPitchClass 
 interface Props {
   /** MIDI notes of the target chord voicing */
   targetNotes: number[];
+  /** MIDI notes played by the left hand (bass) — highlighted differently */
+  bassNotes?: number[];
   /** Pitch classes of the chord (for matching pressed notes in any octave) */
   chordPitchClasses: number[];
   /** MIDI notes currently held down */
@@ -21,6 +23,7 @@ const BLACK_W = 58;
 
 export default function Keyboard({
   targetNotes,
+  bassNotes = [],
   chordPitchClasses,
   pressedNotes,
   heardPitchClasses,
@@ -51,6 +54,7 @@ export default function Keyboard({
   }, []);
 
   const targetSet = useMemo(() => new Set(targetNotes), [targetNotes]);
+  const bassSet = useMemo(() => new Set(bassNotes), [bassNotes]);
   const pressedSet = useMemo(() => new Set(pressedNotes), [pressedNotes]);
   const chordPcSet = useMemo(() => new Set(chordPitchClasses), [chordPitchClasses]);
 
@@ -72,6 +76,7 @@ export default function Keyboard({
             'key',
             'key-white',
             isTarget ? 'key-target' : '',
+            isTarget && bassSet.has(k.midi) ? 'key-bass' : '',
             isTarget && pcHeard ? 'key-target-heard' : '',
             isPressed ? (chordPcSet.has(midiToPitchClass(k.midi)) ? 'key-pressed-good' : 'key-pressed-other') : '',
             success && isTarget ? 'key-success' : '',
@@ -111,6 +116,7 @@ export default function Keyboard({
             'key',
             'key-black',
             isTarget ? 'key-target' : '',
+            isTarget && bassSet.has(k.midi) ? 'key-bass' : '',
             isTarget && pcHeard ? 'key-target-heard' : '',
             isPressed ? (chordPcSet.has(midiToPitchClass(k.midi)) ? 'key-pressed-good' : 'key-pressed-other') : '',
             success && isTarget ? 'key-success' : '',

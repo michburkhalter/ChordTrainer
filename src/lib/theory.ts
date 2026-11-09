@@ -12,15 +12,19 @@ export interface Chord {
   pitchClasses: number[];
   /** Suggested MIDI notes to play (root position, within keyboard range) */
   voicing: number[];
+  /** Left-hand bass note: chord root one octave below the voicing root */
+  bass: number;
 }
 
-export const KEYBOARD_LOW = 48; // C3
+export const KEYBOARD_LOW = 36; // C2 (display range, includes left-hand bass)
 export const KEYBOARD_HIGH = 72; // C5
+const VOICING_LOW = 48; // C3 (right-hand chord voicing stays in this range)
+const VOICING_HIGH = 72;
 
 const isBlackKey = (midi: number) => [1, 3, 6, 8, 10].includes(((midi % 12) + 12) % 12);
 
 /**
- * Build a root-position voicing of the chord inside [KEYBOARD_LOW, KEYBOARD_HIGH].
+ * Build a root-position voicing of the chord inside [VOICING_LOW, VOICING_HIGH].
  * Prefers a compact voicing with the root closest to MIDI 55 (G3).
  */
 export function chordVoicing(rootPc: number, quality: ChordQuality): number[] {
@@ -30,7 +34,7 @@ export function chordVoicing(rootPc: number, quality: ChordQuality): number[] {
 
   const candidates = pcs.map((pc) => {
     const list: number[] = [];
-    for (let m = KEYBOARD_LOW; m <= KEYBOARD_HIGH; m++) {
+    for (let m = VOICING_LOW; m <= VOICING_HIGH; m++) {
       if (((m % 12) + 12) % 12 === pc) list.push(m);
     }
     return list;
@@ -63,12 +67,14 @@ export function chordVoicing(rootPc: number, quality: ChordQuality): number[] {
 
 export function makeChord(root: number, quality: ChordQuality): Chord {
   const third = quality === 'minor' ? 3 : 4;
+  const voicing = chordVoicing(root, quality);
   return {
     root,
     quality,
     symbol: NOTE_NAMES[root] + (quality === 'minor' ? 'm' : ''),
     pitchClasses: [root, (root + third) % 12, (root + 7) % 12],
-    voicing: chordVoicing(root, quality),
+    voicing,
+    bass: voicing[0] - 12,
   };
 }
 

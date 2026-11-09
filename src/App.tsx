@@ -14,6 +14,7 @@ const STORAGE_KEY = 'chordtrainer.enabledChords';
 const LIGHTS_KEY = 'chordtrainer.keylights';
 const EXTRA_KEY = 'chordtrainer.allowExtra';
 const OCTAVE_KEY = 'chordtrainer.anyOctave';
+const LEFT_KEY = 'chordtrainer.leftHand';
 
 function loadEnabledChords(): Set<string> {
   try {
@@ -60,6 +61,9 @@ export default function App() {
   const [anyOctave, setAnyOctave] = useState(
     () => localStorage.getItem(OCTAVE_KEY) !== '0',
   );
+  const [leftHand, setLeftHand] = useState(
+    () => localStorage.getItem(LEFT_KEY) !== '0',
+  );
   const lightsRef = useRef<KeyLights | null>(null);
   const poolChords = useMemo(
     () => ALL_CHORDS.filter((c) => enabledSymbols.has(c.symbol)),
@@ -85,9 +89,22 @@ export default function App() {
     [activeNotes],
   );
 
+  // Notes the player must sound: chord voicing + optional left-hand bass
+  const requiredNotes = useMemo(
+    () => (leftHand ? [...chord.voicing, chord.bass] : chord.voicing),
+    [chord, leftHand],
+  );
+
   const satisfied = useMemo(() => {
     if (anyOctave) {
       if (!chord.pitchClasses.every((pc) => heardPitchClasses.has(pc))) return false;
+      if (leftHand) {
+        // the bass must sound below the chord root (left hand register)
+        const hasBass = activeNotes.some(
+          (m) => m < chord.voicing[0] && midiToPitchClass(m) === chord.root,
+        );
+        if (!hasBass) return false;
+      }
       if (!allowExtra) {
         // strict: every sounding pitch class must belong to the chord
         for (const pc of heardPitchClasses) {
@@ -96,23 +113,25 @@ export default function App() {
       }
       return true;
     }
-    // exact keys: every note of the displayed voicing must be held
+    // exact keys: every required note must be held
     const held = new Set(activeNotes);
-    if (!chord.voicing.every((m) => held.has(m))) return false;
+    if (!requiredNotes.every((m) => held.has(m))) return false;
     if (!allowExtra) {
-      const allowed = new Set(chord.voicing);
+      const allowed = new Set(requiredNotes);
       for (const m of activeNotes) {
         if (!allowed.has(m)) return false;
       }
     }
     return true;
-  }, [chord, heardPitchClasses, activeNotes, allowExtra, anyOctave]);
+  }, [chord, requiredNotes, heardPitchClasses, activeNotes, allowExtra, anyOctave, leftHand]);
 
   // Refs so the interval always sees fresh values without re-subscribing
   const satisfiedRef = useRef(satisfied);
   satisfiedRef.current = satisfied;
   const chordRef = useRef(chord);
   chordRef.current = chord;
+  const requiredRef = useRef(requiredNotes);
+  requiredRef.current = requiredNotes;
   const phaseRef = useRef(phase);
   phaseRef.current = phase;
   const holdSinceRef = useRef<number | null>(null);
@@ -130,7 +149,7 @@ export default function App() {
           holdSinceRef.current = null;
           setPhase('success');
           playConfirm();
-          playChord(chordRef.current.voicing);
+          playChord(requiredRef.current);
           window.setTimeout(() => {
             setCompleted((c) => c + 1);
             setIndex((i) => i + 1);
@@ -153,14 +172,21 @@ export default function App() {
     }
   }, [index, deck, poolChords]);
 
-  const applyChordPool = (next: Set<string>, nextAllowExtra: boolean, nextAnyOctave: boolean) => {
+  const applyChordPool = (
+    next: Set<string>,
+    nextAllowExtra: boolean,
+    nextAnyOctave: boolean,
+    nextLeftHand: boolean,
+  ) => {
     setEnabledSymbols(next);
     setAllowExtra(nextAllowExtra);
     setAnyOctave(nextAnyOctave);
+    setLeftHand(nextLeftHand);
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify([...next]));
       localStorage.setItem(EXTRA_KEY, nextAllowExtra ? '1' : '0');
       localStorage.setItem(OCTAVE_KEY, nextAnyOctave ? '1' : '0');
+      localStorage.setItem(LEFT_KEY, nextLeftHand ? '1' : '0');
     } catch {
       // storage unavailable
     }
@@ -200,8 +226,8 @@ export default function App() {
     }
     if (!lightsRef.current) lightsRef.current = new KeyLights(midi.send);
     lightsRef.current.enable();
-    lightsRef.current.setNotes(chord.voicing);
-  }, [keyLightsOn, midi.connected, midi.sysex, midi.send, chord, listeningKey]);
+    lightsRef.current.setNotes(requiredNotes);
+  }, [keyLightsOn, midi.connected, midi.sysex, midi.send, requiredNotes, listeningKey]);
 
   useEffect(() => {
     return () => {
@@ -286,7 +312,7 @@ export default function App() {
             <span className="chord-quality">{chord.quality}</span>
           </div>
           <div className="chord-notes">
-            {chord.voicing.map((m) => (
+            {requiredNotes.map((m) => (
               <span key={m} className="chord-note">
                 {noteNameWithOctave(m)}
               </span>
@@ -308,7 +334,8 @@ export default function App() {
         </div>
 
         <Keyboard
-          targetNotes={chord.voicing}
+          targetNotes={requiredNotes}
+          bassNotes={leftHand ? [chord.bass] : []}
           chordPitchClasses={chord.pitchClasses}
           pressedNotes={activeNotes}
           heardPitchClasses={heardPitchClasses}
@@ -324,7 +351,7 @@ export default function App() {
           </span>
           <span className="hint">
             {midi.connected || micOn
-              ? `${anyOctave ? 'Chord tones in any octave' : 'Exact keys shown'} · ${allowExtra ? 'extra notes OK' : 'no extra notes'} · hold 0.5s`
+              ? `${anyOctave ? 'Chord tones in any octave' : 'Exact keys shown'} · ${allowExtra ? 'extra notes OK' : 'no extra notes'}${leftHand ? ' · LH bass' : ''} · hold 0.5s`
               : 'Connect your Clavinova via USB, or allow the microphone'}
           </span>
         </footer>
@@ -335,6 +362,7 @@ export default function App() {
         enabled={enabledSymbols}
         allowExtra={allowExtra}
         anyOctave={anyOctave}
+        leftHand={leftHand}
         onApply={applyChordPool}
         onClose={() => setSettingsOpen(false)}
       />

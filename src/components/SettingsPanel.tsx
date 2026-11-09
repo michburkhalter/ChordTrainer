@@ -7,16 +7,18 @@ interface Props {
   enabled: Set<string>;
   allowExtra: boolean;
   anyOctave: boolean;
-  onApply: (next: Set<string>, allowExtra: boolean, anyOctave: boolean) => void;
+  leftHand: boolean;
+  onApply: (next: Set<string>, allowExtra: boolean, anyOctave: boolean, leftHand: boolean) => void;
   onClose: () => void;
 }
 
 const OPEN_CHORDS = ['C', 'G', 'F', 'A', 'Dm', 'Am', 'Em'];
 
-export default function SettingsPanel({ open, enabled, allowExtra, anyOctave, onApply, onClose }: Props) {
+export default function SettingsPanel({ open, enabled, allowExtra, anyOctave, leftHand, onApply, onClose }: Props) {
   const [draft, setDraft] = useState<Set<string>>(new Set(enabled));
   const [extraDraft, setExtraDraft] = useState(allowExtra);
   const [octaveDraft, setOctaveDraft] = useState(anyOctave);
+  const [leftDraft, setLeftDraft] = useState(leftHand);
 
   // Reset the draft whenever the panel is opened
   useEffect(() => {
@@ -24,8 +26,9 @@ export default function SettingsPanel({ open, enabled, allowExtra, anyOctave, on
       setDraft(new Set(enabled));
       setExtraDraft(allowExtra);
       setOctaveDraft(anyOctave);
+      setLeftDraft(leftHand);
     }
-  }, [open, enabled, allowExtra, anyOctave]);
+  }, [open, enabled, allowExtra, anyOctave, leftHand]);
 
   const groups = useMemo(() => {
     const byRoot = new Map<number, Chord[]>();
@@ -91,6 +94,18 @@ export default function SettingsPanel({ open, enabled, allowExtra, anyOctave, on
         <label className="setting-row">
           <input
             type="checkbox"
+            checked={leftDraft}
+            onChange={(e) => setLeftDraft(e.target.checked)}
+          />
+          <span>
+            Left hand (bass note)
+            <em>Add the chord root an octave below for the left hand</em>
+          </span>
+        </label>
+
+        <label className="setting-row">
+          <input
+            type="checkbox"
             checked={extraDraft}
             onChange={(e) => setExtraDraft(e.target.checked)}
           />
@@ -146,7 +161,7 @@ export default function SettingsPanel({ open, enabled, allowExtra, anyOctave, on
             <button className="btn" onClick={() => setAll(false)}>
               None
             </button>
-            <button className="btn btn-primary" onClick={() => onApply(draft, extraDraft, octaveDraft)} disabled={draft.size === 0}>
+            <button className="btn btn-primary" onClick={() => onApply(draft, extraDraft, octaveDraft, leftDraft)} disabled={draft.size === 0}>
               Apply
             </button>
           </div>
