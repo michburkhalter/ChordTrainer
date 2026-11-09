@@ -98,7 +98,13 @@ export function useMidiInput(): MidiStatus & { connect: () => void } {
         access.addEventListener('statechange', () => attachInputs(access));
       })
       .catch((err) => {
-        setStatus((s) => ({ ...s, error: `MIDI access denied: ${err}` }));
+        const denied = err instanceof DOMException && err.name === 'NotAllowedError';
+        setStatus((s) => ({
+          ...s,
+          error: denied
+            ? 'MIDI permission denied. Open http://localhost:5173 in Chrome or Edge — embedded previews cannot access USB MIDI.'
+            : `MIDI access failed: ${err}`,
+        }));
       });
   }, [attachInputs]);
 

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Keyboard from './components/Keyboard';
+import SettingsPanel from './components/SettingsPanel';
 import { ALL_CHORDS, NOTE_NAMES, shuffle, midiToPitchClass, type Chord } from './lib/theory';
 import { useMidiInput } from './lib/midi';
 import { PitchDetector } from './lib/mic';
@@ -8,10 +9,26 @@ import { playChord, playConfirm } from './lib/sound';
 const HOLD_MS = 500;
 const SUCCESS_MS = 900;
 const UPCOMING_COUNT = 4;
+const STORAGE_KEY = 'chordtrainer.enabledChords';
 
-function freshDeck(avoid?: string): Chord[] {
-  const deck = shuffle(ALL_CHORDS);
-  if (avoid && deck[0].symbol === avoid && deck.length > 1) {
+function loadEnabledChords(): Set<string> {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      const arr = JSON.parse(raw) as string[];
+      const valid = arr.filter((s) => ALL_CHORDS.some((c) => c.symbol === s));
+      if (valid.length > 0) return new Set(valid);
+    }
+  } catch {
+    // ignore corrupted storage
+  }
+  return new Set(ALL_CHORDS.map((c) => c.symbol));
+}
+
+function freshDeck(pool: Chord[], avoid?: string): Chord[] {
+  if (pool.length <= 1) return pool.slice();
+  const deck = shuffle(pool);
+  if (avoid && deck[0].symbol === avoid) {
     [deck[0], deck[1]] = [deck[1], deck[0]];
   }
   return deck;
@@ -28,7 +45,13 @@ export default function App() {
   const [micOn, setMicOn] = useState(false);
   const [micError, setMicError] = useState<string | null>(null);
 
-  const [deck, setDeck] = useState<Chord[]>(() => freshDeck());
+  const [enabledSymbols, setEnabledSymbols] = useState<Set<string>>(loadEnabledChords);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const poolChords = useMemo(
+    () => ALL_CHORDS.filter((c) => enabledSymbols.has(c.symbol)),
+    [enabledSymbols],
+  );
+  const [deck, setDeck] = useState<Chord[]>(() => freshDeck(poolChords));
   const [index, setIndex] = useState(0);
   const [completed, setCompleted] = useState(0);
   const [phase, setPhase] = useState<'waiting' | 'holding' | 'success'>('waiting');
@@ -93,10 +116,25 @@ export default function App() {
   // Reshuffle the deck when we run off the end
   useEffect(() => {
     if (index >= deck.length) {
-      setDeck(freshDeck(deck[deck.length - 1]?.symbol));
+      setDeck(freshDeck(poolChords, deck[deck.length - 1]?.symbol));
       setIndex(0);
     }
-  }, [index, deck]);
+  }, [index, deck, poolChords]);
+
+  const applyChordPool = (next: Set<string>) => {
+    setEnabledSymbols(next);
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify([...next]));
+    } catch {
+      // storage unavailable
+    }
+    const pool = ALL_CHORDS.filter((c) => next.has(c.symbol));
+    setDeck(freshDeck(pool, chord.symbol));
+    setIndex(0);
+    setPhase('waiting');
+    holdSinceRef.current = null;
+    setSettingsOpen(false);
+  };
 
   // Mic toggle
   const toggleMic = async () => {
@@ -158,6 +196,9 @@ export default function App() {
           >
             {micOn ? 'Mic: on' : 'Use microphone'}
           </button>
+          <button className="btn" onClick={() => setSettingsOpen(true)}>
+            ⚙ Chords ({enabledSymbols.size})
+          </button>
         </div>
       </header>
 
@@ -216,6 +257,13 @@ export default function App() {
           </span>
         </footer>
       </main>
+
+      <SettingsPanel
+        open={settingsOpen}
+        enabled={enabledSymbols}
+        onApply={applyChordPool}
+        onClose={() => setSettingsOpen(false)}
+      />
     </div>
   );
 }
