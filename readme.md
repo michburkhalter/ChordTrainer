@@ -28,6 +28,15 @@ Open http://localhost:5173 in **Chrome or Edge** (required for Web MIDI).
 Chord tones count in **any octave and any inversion**; extra notes are allowed.
 All chord tones must be held for ~0.5 s to advance.
 
+### Key lights (CSP Stream Lights)
+
+When connected over USB with SysEx permitted, the app can light the chord's keys
+on the piano's own LEDs via Yamaha's "MIDI Key LED Mode" (`src/lib/keylights.ts`).
+Toggle it with the **🔦 Lights** button; the setting is remembered across reloads.
+
+Note: this uses the documented Clavinova LED protocol; if the CSP-150 doesn't
+respond, the lights simply stay dark — everything else keeps working.
+
 ## Microphone fallback
 
 Click **Use microphone** and allow access. The app detects pitch classes from

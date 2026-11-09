@@ -4,12 +4,14 @@ import SettingsPanel from './components/SettingsPanel';
 import { ALL_CHORDS, NOTE_NAMES, shuffle, midiToPitchClass, type Chord } from './lib/theory';
 import { useMidiInput } from './lib/midi';
 import { PitchDetector } from './lib/mic';
+import { KeyLights } from './lib/keylights';
 import { playChord, playConfirm } from './lib/sound';
 
 const HOLD_MS = 500;
 const SUCCESS_MS = 900;
 const UPCOMING_COUNT = 4;
 const STORAGE_KEY = 'chordtrainer.enabledChords';
+const LIGHTS_KEY = 'chordtrainer.keylights';
 
 function loadEnabledChords(): Set<string> {
   try {
@@ -47,6 +49,10 @@ export default function App() {
 
   const [enabledSymbols, setEnabledSymbols] = useState<Set<string>>(loadEnabledChords);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [keyLightsOn, setKeyLightsOn] = useState(
+    () => localStorage.getItem(LIGHTS_KEY) !== '0',
+  );
+  const lightsRef = useRef<KeyLights | null>(null);
   const poolChords = useMemo(
     () => ALL_CHORDS.filter((c) => enabledSymbols.has(c.symbol)),
     [enabledSymbols],
@@ -155,9 +161,36 @@ export default function App() {
     }
   };
 
+  // Drive the Clavinova's key LEDs with the target chord
+  const listeningKey = midi.listeningTo.join(',');
   useEffect(() => {
-    return () => detectorRef.current?.stop();
+    if (!keyLightsOn || !midi.connected || !midi.sysex) {
+      lightsRef.current?.disable();
+      return;
+    }
+    if (!lightsRef.current) lightsRef.current = new KeyLights(midi.send);
+    lightsRef.current.enable();
+    lightsRef.current.setNotes(chord.voicing);
+  }, [keyLightsOn, midi.connected, midi.sysex, midi.send, chord, listeningKey]);
+
+  useEffect(() => {
+    return () => {
+      detectorRef.current?.stop();
+      lightsRef.current?.disable();
+    };
   }, []);
+
+  const toggleKeyLights = () => {
+    setKeyLightsOn((v) => {
+      const next = !v;
+      try {
+        localStorage.setItem(LIGHTS_KEY, next ? '1' : '0');
+      } catch {
+        // storage unavailable
+      }
+      return next;
+    });
+  };
 
   const upcoming = useMemo(() => {
     const out: Chord[] = [];
@@ -196,6 +229,15 @@ export default function App() {
           >
             {micOn ? 'Mic: on' : 'Use microphone'}
           </button>
+          {midi.connected && midi.sysex && (
+            <button
+              className={`btn ${keyLightsOn ? 'btn-active' : ''}`}
+              onClick={toggleKeyLights}
+              title="Light up the chord keys on the Clavinova's LEDs"
+            >
+              {keyLightsOn ? '🔦 Lights: on' : '🔦 Lights: off'}
+            </button>
+          )}
           <button className="btn" onClick={() => setSettingsOpen(true)}>
             ⚙ Chords ({enabledSymbols.size})
           </button>
