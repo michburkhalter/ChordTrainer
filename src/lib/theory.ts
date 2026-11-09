@@ -17,52 +17,24 @@ export interface Chord {
 }
 
 export const KEYBOARD_LOW = 36; // C2 (display range, includes left-hand bass)
-export const KEYBOARD_HIGH = 72; // C5
-const VOICING_LOW = 48; // C3 (right-hand chord voicing stays in this range)
-const VOICING_HIGH = 72;
+export const KEYBOARD_HIGH = 79; // G5 (highest chord tone is F#5 for B-rooted chords)
+const VOICING_LOW = 60; // C4 (chord roots live in the C4–B4 octave)
 
 const isBlackKey = (midi: number) => [1, 3, 6, 8, 10].includes(((midi % 12) + 12) % 12);
 
+const THIRD_TOP = 70; // A#4/Bb4 — thirds never sound above this
+const FIFTH_TOP = 71; // B4 — the fifth may reach B4 (it tops the chord)
+
 /**
- * Build a root-position voicing of the chord inside [VOICING_LOW, VOICING_HIGH].
- * Prefers a compact voicing with the root closest to MIDI 55 (G3).
+ * Root-position voicing with the root in the C4–B4 octave (MIDI 60–71).
+ * The third drops an octave above A#4, the fifth above B4 — e.g. the C of
+ * F major sounds at C4, the B of G major at B3, while Em keeps its B4.
  */
 export function chordVoicing(rootPc: number, quality: ChordQuality): number[] {
-  const thirdPc = (rootPc + (quality === 'minor' ? 3 : 4)) % 12;
-  const fifthPc = (rootPc + 7) % 12;
-  const pcs = [rootPc, thirdPc, fifthPc];
-
-  const candidates = pcs.map((pc) => {
-    const list: number[] = [];
-    for (let m = VOICING_LOW; m <= VOICING_HIGH; m++) {
-      if (((m % 12) + 12) % 12 === pc) list.push(m);
-    }
-    return list;
-  });
-
-  let best: number[] | null = null;
-  let bestScore = Infinity;
-
-  for (const r of candidates[0]) {
-    for (const t of candidates[1]) {
-      for (const f of candidates[2]) {
-        if (!(r < t && t < f)) continue; // root position only
-        const span = f - r;
-        // prefer compact voicings, then root near 55
-        const score = span * 10 + Math.abs(r - 55);
-        if (score < bestScore) {
-          bestScore = score;
-          best = [r, t, f];
-        }
-      }
-    }
-  }
-
-  // Fallback (shouldn't happen for triads in this range): any in-range combo
-  if (!best) {
-    best = pcs.map((_pc, i) => candidates[i][0]);
-  }
-  return best;
+  const third = quality === 'minor' ? 3 : 4;
+  const root = VOICING_LOW + rootPc; // 60 + pc -> 60..71
+  const cap = (m: number, top: number) => (m > top ? m - 12 : m);
+  return [root, cap(root + third, THIRD_TOP), cap(root + 7, FIFTH_TOP)];
 }
 
 export function makeChord(root: number, quality: ChordQuality): Chord {
