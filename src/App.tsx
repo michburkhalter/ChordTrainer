@@ -15,6 +15,7 @@ const LIGHTS_KEY = 'chordtrainer.keylights';
 const EXTRA_KEY = 'chordtrainer.allowExtra';
 const OCTAVE_KEY = 'chordtrainer.anyOctave';
 const LEFT_KEY = 'chordtrainer.leftHand';
+const APP_VERSION = '1.0.0';
 
 function loadEnabledChords(): Set<string> {
   try {
@@ -390,6 +391,16 @@ export default function App() {
           </span>
           <span>
             Deck: <strong>{Math.min(index + 1, deck.length)}/{deck.length}</strong>
+          </span>
+          <span className="hint">
+            v{APP_VERSION} · MIT License · © 2026{' '}
+            <a
+              href="https://github.com/michburkhalter/ChordTrainer"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              MichBurkhalter
+            </a>
           </span>
           <span className="hint">
             {midi.connected || micOn
