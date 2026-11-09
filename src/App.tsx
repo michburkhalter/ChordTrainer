@@ -257,7 +257,7 @@ export default function App() {
   }, [deck, index]);
 
   const inputStatus = midi.connected
-    ? `MIDI: ${midi.listeningTo.join(', ') || 'connected'}`
+    ? `MIDI: ${midi.listeningTo.join(', ') || 'no devices found'}`
     : micOn
       ? 'Microphone'
       : 'No input';

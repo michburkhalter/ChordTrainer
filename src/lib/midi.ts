@@ -107,7 +107,7 @@ export function useMidiInput(): MidiStatus & { connect: () => void; send: (data:
         devices,
         outputs,
         listeningTo: listening,
-        error: devices.length === 0 ? 'No MIDI input devices found' : null,
+        error: null,
       }));
     },
     [syncNotes],
@@ -160,6 +160,11 @@ export function useMidiInput(): MidiStatus & { connect: () => void; send: (data:
     };
     tryAccess(true);
   }, [attachInputs]);
+
+  // Auto-connect on mount; connect() no-ops where Web MIDI is unsupported
+  useEffect(() => {
+    connect();
+  }, [connect]);
 
   // Detach handlers on unmount
   useEffect(() => {
