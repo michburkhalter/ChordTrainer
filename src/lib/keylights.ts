@@ -36,12 +36,15 @@ export class KeyLights {
     private channel = 0, // MIDI channel 1
   ) {}
 
-  /** Send the enable messages (idempotent). */
-  enable() {
-    if (this.enabled) return;
-    this.send(KEY_LED_ON(this.channel));
-    this.send(STREAM_LIGHTS_ON);
-    this.enabled = true;
+  /**
+   * Send the enable messages (idempotent). Returns false when no MIDI output
+   * is available yet, so callers can retry once a device is hot-plugged.
+   */
+  enable(): boolean {
+    if (this.enabled) return true;
+    const ok = this.send(KEY_LED_ON(this.channel)) && this.send(STREAM_LIGHTS_ON);
+    this.enabled = ok;
+    return ok;
   }
 
   /** Turn all lights off and leave LED mode. */

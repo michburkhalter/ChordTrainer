@@ -65,6 +65,8 @@ export default function App() {
     () => localStorage.getItem(LEFT_KEY) !== '0',
   );
   const lightsRef = useRef<KeyLights | null>(null);
+  const lightsActiveRef = useRef(false);
+  const welcomeIdRef = useRef(0);
   const poolChords = useMemo(
     () => ALL_CHORDS.filter((c) => enabledSymbols.has(c.symbol)),
     [enabledSymbols],
@@ -217,20 +219,53 @@ export default function App() {
     }
   };
 
+  // Welcome animation: Knight-Rider style — a single light sweeps
+  // left to right and back across the keyboard, then settles on the chord.
+  const runWelcome = () => {
+    const lights = lightsRef.current;
+    if (!lights) return;
+    const id = ++welcomeIdRef.current;
+    const steps: { notes: number[]; at: number }[] = [];
+    let t = 0;
+    for (let m = 36; m <= 79; m++) {
+      steps.push({ notes: [m], at: t });
+      t += 45;
+    }
+    for (let m = 78; m >= 37; m--) {
+      steps.push({ notes: [m], at: t });
+      t += 45;
+    }
+    steps.push({ notes: requiredRef.current, at: t + 80 });
+    for (const s of steps) {
+      window.setTimeout(() => {
+        if (welcomeIdRef.current === id) lights.setNotes(s.notes);
+      }, s.at);
+    }
+  };
+
   // Drive the Clavinova's key LEDs with the target chord
   const listeningKey = midi.listeningTo.join(',');
+  const outputsKey = midi.outputs.map((o) => o.id).join(',');
   useEffect(() => {
     if (!keyLightsOn || !midi.connected || !midi.sysex) {
+      welcomeIdRef.current++;
+      lightsActiveRef.current = false;
       lightsRef.current?.disable();
       return;
     }
     if (!lightsRef.current) lightsRef.current = new KeyLights(midi.send);
-    lightsRef.current.enable();
-    lightsRef.current.setNotes(requiredNotes);
-  }, [keyLightsOn, midi.connected, midi.sysex, midi.send, requiredNotes, listeningKey]);
+    if (!lightsRef.current.enable()) return; // no output yet; retry on statechange
+    if (!lightsActiveRef.current) {
+      lightsActiveRef.current = true;
+      runWelcome();
+    } else {
+      lightsRef.current.setNotes(requiredNotes);
+    }
+  }, [keyLightsOn, midi.connected, midi.sysex, midi.send, requiredNotes, listeningKey, outputsKey]);
 
   useEffect(() => {
     return () => {
+      welcomeIdRef.current++;
       detectorRef.current?.stop();
       lightsRef.current?.disable();
     };
@@ -262,6 +297,8 @@ export default function App() {
       ? 'Microphone'
       : 'No input';
 
+  const hasMidiDevice = midi.devices.length > 0 || midi.outputs.length > 0;
+
   return (
     <div className="app">
       <header className="topbar">
@@ -287,11 +324,16 @@ export default function App() {
           </button>
           {midi.connected && midi.sysex && (
             <button
-              className={`btn ${keyLightsOn ? 'btn-active' : ''}`}
+              className={`btn ${keyLightsOn && hasMidiDevice ? 'btn-active' : ''}`}
               onClick={toggleKeyLights}
-              title="Light up the chord keys on the Clavinova's LEDs"
+              disabled={!hasMidiDevice}
+              title={
+                hasMidiDevice
+                  ? 'Light up the chord keys on the Clavinova\'s LEDs'
+                  : 'No MIDI device connected'
+              }
             >
-              {keyLightsOn ? '🔦 Lights: on' : '🔦 Lights: off'}
+              {keyLightsOn && hasMidiDevice ? '🔦 Lights: on' : '🔦 Lights: off'}
             </button>
           )}
           <button className="btn" onClick={() => setSettingsOpen(true)}>
