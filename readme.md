@@ -4,6 +4,8 @@ A piano chord trainer web app. It shows a chord (all 24 major/minor triads, shuf
 you play it on your keyboard, and when the chord tones are held for 0.5s the next
 chord appears.
 
+**Try it online: https://michburkhalter.github.io/ChordTrainer/**
+
 ## Run
 
 ```bash
