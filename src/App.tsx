@@ -350,16 +350,18 @@ export default function App() {
           <div className="chord-eyebrow">
             {phase === 'success' ? '✓ Correct!' : 'Play this chord'}
           </div>
-          <div className={`chord-name ${phase === 'success' ? 'chord-success' : ''}`}>
-            {chord.symbol}
-            <span className="chord-quality">{chord.quality}</span>
-          </div>
-          <div className="chord-notes">
-            {requiredNotes.map((m) => (
-              <span key={m} className="chord-note">
-                {noteNameWithOctave(m)}
-              </span>
-            ))}
+          <div className="chord-line">
+            <div className={`chord-name ${phase === 'success' ? 'chord-success' : ''}`}>
+              {chord.symbol}
+              <span className="chord-quality">{chord.quality}</span>
+            </div>
+            <div className="chord-notes">
+              {requiredNotes.map((m) => (
+                <span key={m} className="chord-note">
+                  {noteNameWithOctave(m)}
+                </span>
+              ))}
+            </div>
           </div>
           <div className="hold-bar">
             <div

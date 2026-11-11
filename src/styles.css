@@ -141,6 +141,14 @@ body {
   margin-bottom: 6px;
 }
 
+.chord-line {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 28px;
+  flex-wrap: wrap;
+}
+
 .chord-name {
   font-size: clamp(72px, 12vw, 120px);
   font-weight: 800;
@@ -177,12 +185,10 @@ body {
 
 .chord-notes {
   display: flex;
-  gap: 18px;
-  justify-content: center;
-  margin-top: 10px;
+  gap: 10px;
   color: var(--muted);
-  font-size: 17px;
-  font-weight: 500;
+  font-size: 20px;
+  font-weight: 600;
 }
 
 .chord-note {
