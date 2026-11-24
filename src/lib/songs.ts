@@ -23,6 +23,8 @@ export interface Song {
   bpm: number;
   segments: SongSegment[];
   custom?: boolean;
+  /** Built-in YouTube link, used until the user saves or removes their own */
+  defaultSync?: SongSync;
 }
 
 const FLAT_TO_SHARP: Record<string, string> = {
@@ -105,6 +107,7 @@ export const BUILTIN_SONGS: Song[] = [
     title: 'I Can See Clearly Now',
     artist: 'Jimmy Cliff',
     bpm: 120,
+    defaultSync: { videoId: '25zh44aicfo', offsetSec: 0, bpm: 120 },
     segments: [
       ...chart('Verse 1', ICSCN_VERSE),
       ...chart('Verse 2', ICSCN_VERSE),

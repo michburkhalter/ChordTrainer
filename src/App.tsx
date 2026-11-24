@@ -72,14 +72,16 @@ function loadCustomSongs(): Song[] {
   }
 }
 
-function loadSongSync(): Record<string, SongSync> {
+/** Stored sync per song; null = user removed a built-in default link. */
+function loadSongSync(): Record<string, SongSync | null> {
   try {
     const raw = localStorage.getItem(SONGSYNC_KEY);
     if (!raw) return {};
-    const obj = JSON.parse(raw) as Record<string, SongSync>;
-    const out: Record<string, SongSync> = {};
+    const obj = JSON.parse(raw) as Record<string, SongSync | null>;
+    const out: Record<string, SongSync | null> = {};
     for (const [id, s] of Object.entries(obj)) {
-      if (s && typeof s.videoId === 'string') {
+      if (s === null) out[id] = null;
+      else if (s && typeof s.videoId === 'string') {
         out[id] = {
           videoId: s.videoId,
           offsetSec: Number.isFinite(s.offsetSec) ? s.offsetSec : 0,
@@ -221,7 +223,7 @@ export default function App() {
   const [progress, setProgress] = useState(0);
   const [introSec, setIntroSec] = useState(0);
   const [segBeat, setSegBeat] = useState(0);
-  const [songSync, setSongSync] = useState<Record<string, SongSync>>(loadSongSync);
+  const [storedSync, setStoredSync] = useState<Record<string, SongSync | null>>(loadSongSync);
   const [videoError, setVideoError] = useState<string | null>(null);
   const [ytVideoId, setYtVideoId] = useState<string | null>(null);
   const [ytRates, setYtRates] = useState<number[]>([1]);
@@ -240,6 +242,16 @@ export default function App() {
   const videoClockRef = useRef({ vt: 0, pt: 0, playing: false, rate: 1 });
 
   const allSongs = useMemo(() => [...BUILTIN_SONGS, ...customSongs], [customSongs]);
+  // Effective links: built-in defaults overridden (or removed) by stored entries
+  const songSync = useMemo(() => {
+    const out: Record<string, SongSync> = {};
+    for (const s of allSongs) if (s.defaultSync) out[s.id] = s.defaultSync;
+    for (const [id, s] of Object.entries(storedSync)) {
+      if (s) out[id] = s;
+      else delete out[id];
+    }
+    return out;
+  }, [allSongs, storedSync]);
 
   // Combine inputs: MIDI when connected, plus mic when enabled
   const activeNotes = useMemo(() => {
@@ -543,9 +555,10 @@ export default function App() {
   };
 
   const saveSync = (songId: string, entry: SongSync | null) => {
-    setSongSync((prev) => {
+    const hasDefault = allSongs.some((s) => s.id === songId && s.defaultSync);
+    setStoredSync((prev) => {
       const next = { ...prev };
-      if (entry) next[songId] = entry;
+      if (entry || hasDefault) next[songId] = entry;
       else delete next[songId];
       try {
         localStorage.setItem(SONGSYNC_KEY, JSON.stringify(next));

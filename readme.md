@@ -86,7 +86,9 @@ flash on the Clavinova's Stream Lights when enabled.
 
 ### Play along with YouTube
 
-Press **🔗** on any song to paste a YouTube link (or video ID). A
+"I Can See Clearly Now" comes with a default video link. For other songs,
+press **🔗** to paste a YouTube link (or video ID); a saved link replaces the
+default and "Remove link" removes it. A
 **▶ YouTube** button then plays the chart synced to a video shown beside the
 falling-notes strip (above it on narrower screens) — the audio comes from YouTube itself, nothing is
 downloaded, and the synth accompaniment/metronome are muted.
