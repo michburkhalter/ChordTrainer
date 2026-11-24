@@ -46,6 +46,21 @@ export function playChord(midis: number[], duration = 1.6) {
   }
 }
 
+/** Short metronome tick — higher pitch on accented beats. */
+export function playClick(accent = false) {
+  const ac = getCtx();
+  const t = ac.currentTime;
+  const osc = ac.createOscillator();
+  osc.type = 'sine';
+  osc.frequency.value = accent ? 1760 : 1320;
+  const gain = ac.createGain();
+  gain.gain.setValueAtTime(accent ? 0.07 : 0.045, t);
+  gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.05);
+  osc.connect(gain).connect(ac.destination);
+  osc.start(t);
+  osc.stop(t + 0.06);
+}
+
 /** Short confirmation blip when the hold completes. */
 export function playConfirm() {
   const ac = getCtx();

@@ -28,7 +28,7 @@ const STREAM_LIGHTS_ON = [
 ];
 
 export class KeyLights {
-  private lit = new Set<number>();
+  private lit = new Map<number, number>(); // note -> velocity (1 flash, 2 solid)
   private enabled = false;
 
   constructor(
@@ -60,14 +60,23 @@ export class KeyLights {
    * vel=2 gives a solid LED, vel=1 a flashing one.
    */
   setNotes(notes: number[], flash = false) {
+    this.setLights(flash ? [] : notes, flash ? notes : []);
+  }
+
+  /**
+   * Light `solid` notes steadily and `flash` notes blinking (a note in both
+   * stays solid). Only keys whose state actually changed get a MIDI message.
+   */
+  setLights(solid: number[], flash: number[] = []) {
     if (!this.enabled) return;
-    const next = new Set(notes);
-    const vel = flash ? 1 : 2;
-    for (const n of this.lit) {
+    const next = new Map<number, number>();
+    for (const n of flash) next.set(n, 1);
+    for (const n of solid) next.set(n, 2); // solid wins on overlap
+    for (const [n] of this.lit) {
       if (!next.has(n)) this.send([0x90 | this.channel, n, 0]);
     }
-    for (const n of next) {
-      if (!this.lit.has(n)) this.send([0x90 | this.channel, n, vel]);
+    for (const [n, vel] of next) {
+      if (this.lit.get(n) !== vel) this.send([0x90 | this.channel, n, vel]);
     }
     this.lit = next;
   }

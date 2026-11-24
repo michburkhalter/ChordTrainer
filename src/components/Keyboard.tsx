@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
-import { KEYBOARD_HIGH, KEYBOARD_LOW, isBlackMidi, midiToName, midiToPitchClass } from '../lib/theory';
+import { midiToName, midiToPitchClass } from '../lib/theory';
+import { keyLayout, KEYBOARD_W, WHITE_H, BLACK_H } from '../lib/keyLayout';
 
 interface Props {
   /** MIDI notes of the target chord voicing */
@@ -14,12 +15,11 @@ interface Props {
   heardPitchClasses: Set<number>;
   /** True briefly after a successful chord */
   success: boolean;
+  /** MIDI notes of the upcoming chord — ghosted during the final beat */
+  upcomingNotes?: number[];
 }
 
-const W = 1000;
-const WHITE_H = 190;
-const BLACK_H = 118;
-const BLACK_W = 58;
+const W = KEYBOARD_W;
 
 export default function Keyboard({
   targetNotes,
@@ -28,35 +28,15 @@ export default function Keyboard({
   pressedNotes,
   heardPitchClasses,
   success,
+  upcomingNotes = [],
 }: Props) {
-  const keys = useMemo(() => {
-    const all: number[] = [];
-    for (let m = KEYBOARD_LOW; m <= KEYBOARD_HIGH; m++) all.push(m);
-    const whites = all.filter((m) => !isBlackMidi(m));
-    const keyW = W / whites.length;
-
-    const whiteIndex = new Map<number, number>();
-    whites.forEach((m, i) => whiteIndex.set(m, i));
-
-    return all.map((midi) => {
-      const black = isBlackMidi(midi);
-      let x: number;
-      if (black) {
-        // position between the surrounding white keys
-        const prevWhite = midi - 1;
-        const idx = whiteIndex.get(prevWhite) ?? 0;
-        x = (idx + 1) * keyW - BLACK_W / 2;
-      } else {
-        x = (whiteIndex.get(midi) ?? 0) * keyW;
-      }
-      return { midi, x, black, w: black ? BLACK_W : keyW };
-    });
-  }, []);
+  const keys = useMemo(keyLayout, []);
 
   const targetSet = useMemo(() => new Set(targetNotes), [targetNotes]);
   const bassSet = useMemo(() => new Set(bassNotes), [bassNotes]);
   const pressedSet = useMemo(() => new Set(pressedNotes), [pressedNotes]);
   const chordPcSet = useMemo(() => new Set(chordPitchClasses), [chordPitchClasses]);
+  const upcomingSet = useMemo(() => new Set(upcomingNotes), [upcomingNotes]);
 
   return (
     <svg
@@ -76,6 +56,7 @@ export default function Keyboard({
             'key',
             'key-white',
             isTarget ? 'key-target' : '',
+            !isTarget && upcomingSet.has(k.midi) ? 'key-upcoming' : '',
             isTarget && bassSet.has(k.midi) ? 'key-bass' : '',
             isTarget && pcHeard ? 'key-target-heard' : '',
             isPressed ? (chordPcSet.has(midiToPitchClass(k.midi)) ? 'key-pressed-good' : 'key-pressed-other') : '',
@@ -116,6 +97,7 @@ export default function Keyboard({
             'key',
             'key-black',
             isTarget ? 'key-target' : '',
+            !isTarget && upcomingSet.has(k.midi) ? 'key-upcoming' : '',
             isTarget && bassSet.has(k.midi) ? 'key-bass' : '',
             isTarget && pcHeard ? 'key-target-heard' : '',
             isPressed ? (chordPcSet.has(midiToPitchClass(k.midi)) ? 'key-pressed-good' : 'key-pressed-other') : '',

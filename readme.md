@@ -64,6 +64,43 @@ the audio with an FFT harmonic-sum analysis. It works, but is less accurate than
 MIDI — prefer USB when possible. (This is also the only option on Android
 tablets, where browsers don't expose Web MIDI.)
 
+## Songs mode
+
+Switch to **Songs** in the top bar to play along with a song library — including
+*I Can See Clearly Now* (Jimmy Cliff), *Let It Be*, *Stand By Me* and
+*A Horse with No Name*. Pick a song, get a 4-beat count-in, then play each chord
+as it comes up; chords advance automatically and you score a point for every
+chord held in time. A falling-notes strip above the keyboard shows what's
+coming: each bar sits over the key to press, its length is how long the chord
+lasts, and it turns green once you hit it — play the notes as they reach the
+line. In the final beat the next chord's keys also ghost on the keyboard and
+flash on the Clavinova's Stream Lights when enabled.
+
+- **Tempo slider** — 50–120 % of the song's original BPM.
+- **Play chords (accompaniment)** — a synthesized chord guide plays each
+  change; it is *not* the original recording.
+- **Metronome click** — a tick per beat, accented on beat 1.
+- **Your own song** — enter a name, BPM and a chord chart like
+  `C G Am F` or with per-chord beats `C:2 G:2 Am:4 F:4`. Custom songs are
+  saved in the browser.
+
+### Play along with YouTube
+
+Press **🔗** on any song to paste a YouTube link (or video ID). A
+**▶ YouTube** button then plays the chart synced to a video shown beside the
+falling-notes strip (above it on narrower screens) — the audio comes from YouTube itself, nothing is
+downloaded, and the synth accompaniment/metronome are muted.
+
+- **First chord at (s)** — where in the video the chart starts. Easiest:
+  start playback and hit **Tap: first chord now** right on the first chord,
+  then fine-tune with the −0.1/+0.1 s buttons.
+- **BPM** — adjust with the −0.5/+0.5 buttons until the chart lines up.
+  Sync settings are saved per song.
+- **Speed** — slows the video (0.5×–1.25×) for practicing; the chart follows
+  automatically. Pausing or seeking the video re-syncs instantly.
+- Some videos disallow embedding — if one fails, the app tells you; just
+  link a different upload of the song.
+
 ## Deployment
 
 GitHub Pages serves the `docs/` folder on `master` (`vite.config.ts` sets
